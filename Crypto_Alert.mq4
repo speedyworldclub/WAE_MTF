@@ -72,14 +72,20 @@ extern int    LabelsHorizontalShift               = 5;
 extern double LabelsVerticalShift                 = 1.5;
 extern string note3="----------------------------------------------";//----------------------------------------------
 extern bool   alertsOn                            = true;
-extern int    alertsHowManyTimeFrameAligned       = 5;  //
+extern bool   TrendContinousAlertOn               = true; //Trend Continous Alert
+extern bool   ReversalAlertOn                     = true; //Reversal Alert
+extern int    alertsHowManyTimeFrameAligned       = 5;  //Minimal Frame Aligned
 extern bool    alertsTelegram                     = true;
 extern bool    alertsNotify                       = false;
 extern bool   alertsMessage                       = false;
 extern bool   alertsSound                         = false;
 extern bool   alertsEmail                         = false;
-extern string BotToken = "1633848369:AAG7i5JKhaWjTulAca1OeA6P_CiAW0lNwDo";
-extern string ChatID = "-1001388614213 ";
+extern string BotToken = "1607203450:AAFK_DfayctvtyTVXU0qcupS2O5maNtTwco";
+extern string ChatID =   "-1001488517188"; //Need neg -100
+//extern string BotToken = "1633848369:AAG7i5JKhaWjTulAca1OeA6P_CiAW0lNwDo";
+//extern string ChatID = "-1001388614213"; //HardTrend
+//extern string BotToken = "1633848369:AAG7i5JKhaWjTulAca1OeA6P_CiAW0lNwDo";
+//extern string ChatID = "-1001388614213";
 extern string note3a="----------------------------------------------";//----------------------------------------------
 extern int    alertsExitHowManyTimeFrameAlignedMin       = 2;  //
 extern int    alertsExitHowManyTimeFrameAlignedMax       = 3;  //
@@ -106,8 +112,8 @@ extern int    TimeFrame4WingdingsFontCode         = 108;
 extern int    TimeFrame5WingdingsFontCode         = 108;
 extern int    TimeFrame6WingdingsFontCode         = 108; //
 extern string    ProductID                        = "HardTrend";
-extern string UniqueID                            = "007";
-extern int    MaximumCandlesToDisplay             = 500;
+extern string UniqueID                            = "Davidis";
+extern int    MaximumCandlesToDisplay             = 1000;
 string UpSymbol                           = "\x2191";
 string DownSymbol                         = "\x2193"; 
 //  = "↑"; // = "↓";                     
@@ -124,7 +130,7 @@ string candles, LastDirection;
 int Upsignalstrength, Downsignalstrength;
 bool DownLevel1, DownLevel2, DownLevel3, DownLevel4, DownLevel5, DownLevel6, UpLevel1, UpLevel2, UpLevel3, UpLevel4, UpLevel5, UpLevel6;
 datetime now;
-datetime timeoffset=D'1970.1.1 00:05:00';
+datetime timeoffset=D'1970.1.1 00:00:00';
 int timezone;
 
 // CCustomBot bot;
@@ -403,13 +409,52 @@ void arrows_wind(int k, string N,int ots,int Code,color clr, int ArrowSize,bool 
     }
 }
 //-------------------------------------------------------------------
+
+/*
+void manageAlerts()
+{
+   if (alertsOn)
+   {
+      int whichBar = Bars-1;
+      if (trend[whichBar][_up] >= alertsHowManyTimeFrameAligned || trend[whichBar][_dn] >= alertsHowManyTimeFrameAligned)
+      {
+         if (trend[whichBar][_up] >= alertsHowManyTimeFrameAligned) doAlert("up"  ,trend[whichBar][_up]);
+         if (trend[whichBar][_dn] >= alertsHowManyTimeFrameAligned) doAlert("down",trend[whichBar][_dn]);
+      }
+   }
+}
+*/
+
+
+
+
 void manageAlerts()
 {
    if (alertsOn)
    {
       int whichBar = Bars-1;
       int LastwhichBar = whichBar -1;
-      if (trend[whichBar][_up] >= alertsHowManyTimeFrameAligned || trend[whichBar][_dn] >= alertsHowManyTimeFrameAligned)
+      if  ((TrendContinousAlertOn) && (trend[whichBar][_up] >= alertsHowManyTimeFrameAligned || trend[whichBar][_dn] >= alertsHowManyTimeFrameAligned) ) //new mod, keep showing
+      {
+         if (trend[whichBar][_up] >= alertsHowManyTimeFrameAligned) {
+            Last4Down = false;
+            Last3Down = false;   
+            Last2Down = false; 
+            LastDirection = "up";
+            doAlertEnter("up"  ,trend[whichBar][_up]);
+         }   
+         if (trend[whichBar][_dn] >= alertsHowManyTimeFrameAligned) {
+            Last4Up = false;
+            Last3Up = false;
+            Last2Up = false;
+            LastDirection = "down";  
+            doAlertEnter("down",trend[whichBar][_dn]);
+         }
+      }
+  
+  
+  
+       if (!(TrendContinousAlertOn) && (trend[whichBar][_up] >= alertsHowManyTimeFrameAligned || trend[whichBar][_dn] >= alertsHowManyTimeFrameAligned)) //show only when there was a small reverse
       {
 
          if ((trend[whichBar][_up] >= alertsHowManyTimeFrameAligned)&& (LastEnterUp < trend[whichBar][_up]))  {
@@ -427,14 +472,15 @@ void manageAlerts()
             LastEnterUp = 0;
             Last4Up = false;
             Last3Up = false;
-            Last2Up = false; 
-            LastDirection = "down";                        
+            Last2Up = false;
+            LastDirection = "down";                         
             doAlertEnter("down",trend[whichBar][_dn]);
          }
       }
   
+  
       
-      
+ if ((ReversalAlertOn) && !(TrendContinousAlertOn)) {     
       
       if ((UpLevel2) && (LastEnterDown > 0) && !(Last2Up) ) {
            Last2Up = true;
@@ -478,10 +524,59 @@ void manageAlerts()
         //   Alert (Symbol() + " Level 4 Down");
         //   SendNotification (Symbol()+" Level 4 Down");
       }  
+    }// Reversal
+  
 
+      
+ if ((ReversalAlertOn) && (TrendContinousAlertOn)) {     
+      
+      if ((UpLevel2) && !(Last2Up) ) {
+           Last2Up = true;
+           doAlertExit("up",trend[whichBar][_up], 2);
+        //   Alert (Symbol() + " Level 2 Up");
+        //   SendNotification (Symbol()+" Level 2 Up");
+      }
+      
+      if ((DownLevel2)  && !(Last2Down) ) {
+           Last2Down = true;
+           doAlertExit("down",trend[whichBar][_dn], 2);           
+        //   Alert (Symbol() + " Level 2 Down");
+        //   SendNotification (Symbol()+" Level 2 Down");
+      }      
+      
+      if ((UpLevel3)  && !(Last3Up) ) {
+           Last3Up = true;
+           doAlertExit("up",trend[whichBar][_up], 3);           
+        //   Alert (Symbol() + " Level 3 Up");
+        //   SendNotification (Symbol()+" Level 3 Up");
+      }
+      
+      if ((DownLevel2)  && !(Last3Down) ) {
+           Last3Down = true;
+            doAlertExit("down",trend[whichBar][_dn], 3);           
+        //   Alert (Symbol() + " Level 3 Down");
+        //   SendNotification (Symbol()+" Level 3 Down");
+      }       
+
+
+      if ((UpLevel4)  && !(Last4Up) ) {
+           Last4Up = true;
+            doAlertExit("up",trend[whichBar][_up], 4);            
+        //   Alert (Symbol() + " Level 4 Up");
+        //   SendNotification (Symbol()+" Level 4 Up");
+      }
+      
+      if ((DownLevel4) && !(Last4Down) ) {
+           Last4Down = true;
+            doAlertExit("down",trend[whichBar][_dn],4);           
+        //   Alert (Symbol() + " Level 4 Down");
+        //   SendNotification (Symbol()+" Level 4 Down");
+      }  
+    }// Reversal  
   
   
-   }
+  
+   }// if alertOn
 }
 //-------------------------------------------------------------------
 void doAlertEnter(string doWhat, int howMany)
@@ -498,7 +593,6 @@ void doAlertEnter(string doWhat, int howMany)
        if (((LastDirection == "up") && (doWhat == "down")) ||  ((LastDirection == "down") && (doWhat == "up"))){LastDirection=""; BuyorSell = " 🌞"; } else {BuyorSell = "";}
        if (doWhat == "up") {BuyorSell="🍏🍏⏫BUY"; signalstrength=Upsignalstrength;} else {BuyorSell="🍎🍎⏬SELL"; signalstrength=Downsignalstrength;};
        signalstrength = MathRound(100*signalstrength/63);
-       
        
 /*       
  message =  BuyorSell+" "+Symbol() +" @ "+Close[0]+"\n"+"\n"
@@ -524,7 +618,8 @@ if (ADIOn) {message += "R.I.: "+ ADI_Count(); }
             
  message += "Sensitivity: "+ Sensitive+"\n"              
       //    +"ProductID: "+ProductID+"\n"
-            +"UniqueID: "+UniqueID ;   
+            +"UniqueID: "+UniqueID+"\n"
+            +"Mode: "+TrendContinousAlertOn+", "+ReversalAlertOn;  
 
           //- D'1970.1.1 00:3';
           
@@ -576,7 +671,11 @@ void doAlertExit(string doWhat, int howMany, int Level)
    if (previousAlert != doWhat || previousTime != Time[0]) {
        previousAlert  = doWhat;
        previousTime   = Time[0];
-       if (doWhat == "up") {BuyorSell="🍏↗️Turning Bullish"; signalstrength=Upsignalstrength;} else {BuyorSell="🍎↘️Turning Bearish"; signalstrength=Downsignalstrength;};
+       if (doWhat == "up") {BuyorSell="🍏↗️Turning Bullish"; signalstrength=Upsignalstrength;} else {BuyorSell="🍎↘️Turning Bearish"; signalstrength=Downsignalstrength;
+     //  if (doWhat == "up") {BuyorSell="🍏↗️Turning Bullish"; signalstrength=Upsignalstrength;} else {BuyorSell="🍎↘️Turning Bearish"; signalstrength=Downsignalstr;ength       
+       
+       
+       }
        signalstrength = MathRound(100*signalstrength/63);
        
 /*
@@ -604,8 +703,9 @@ void doAlertExit(string doWhat, int howMany, int Level)
 //if (ADIOn) {message += "R.I.: "+ ADI_Count(); }             
             
  message += "Sensitivity: "+ Sensitive+"\n"            
-      //      +"ProductID: "+ProductID+"\n"
-            +"UniqueID: "+UniqueID ;  
+      //    +"ProductID: "+ProductID+"\n"
+            +"UniqueID: "+UniqueID+"\n"
+            +"Mode: "+TrendContinousAlertOn+", "+ReversalAlertOn;    
  
           if ((TimeLocal() - now > timeoffset )) {          
              if (alertsTelegram) SendTelegramChannel(message); 
@@ -642,21 +742,7 @@ void doAlertExit(string doWhat, int howMany, int Level)
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 //-------------------------------------------------------------------
-
-
 
 
 string sTfTable[] = {"M1","M5","M15","M30","H1","H4","D1","W1","MN"};
